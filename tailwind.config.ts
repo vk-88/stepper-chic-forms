@@ -57,6 +57,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        step: {
+          active: "hsl(var(--step-active))",
+          inactive: "hsl(var(--step-inactive))",
+          complete: "hsl(var(--step-complete))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
