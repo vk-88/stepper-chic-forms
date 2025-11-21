@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button, Card, CardContent, Box, Typography } from "@mui/material";
 import Stepper, { Step } from "@/components/Stepper";
 import PersonalDetails from "@/components/FormSteps/PersonalDetails";
 import AddressDetails from "@/components/FormSteps/AddressDetails";
@@ -133,14 +132,21 @@ const MultiStepForm = () => {
       permanentStreet2: sameAsResidential
         ? data.residentialStreet2
         : data.permanentStreet2,
-      documents: documents,
+      documents: documents.map(doc => ({
+        fileName: doc.fileName,
+        fileType: doc.fileType,
+        file: doc.file?.name || ''
+      })),
+      submittedAt: new Date().toISOString(),
+      id: Date.now().toString()
     };
 
+    // Store in localStorage
+    const existingSubmissions = JSON.parse(localStorage.getItem("formSubmissions") || "[]");
+    existingSubmissions.push(formData);
+    localStorage.setItem("formSubmissions", JSON.stringify(existingSubmissions));
+
     console.log("Form submitted:", formData);
-    
-    // API call would go here
-    // Example: await api.submitForm(formData);
-    
     toast.success("Form submitted successfully!");
     
     // Reset form after successful submission
@@ -153,74 +159,74 @@ const MultiStepForm = () => {
   };
 
   const handleLogout = () => {
-    // Clear any auth data here
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("isAdmin");
     toast.success("Logged out successfully");
     navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">
+    <Box className="min-h-screen bg-background py-8 px-4">
+      <Box maxWidth="1000px" mx="auto">
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Typography variant="h4" fontWeight="bold">
             Document Submission Form
-          </h1>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
+          </Typography>
+          <Button variant="outlined" onClick={handleLogout} startIcon={<LogOut size={18} />}>
             Logout
           </Button>
-        </div>
+        </Box>
 
-        <Card className="shadow-lg">
+        <Card elevation={3}>
           <Stepper steps={steps} currentStep={currentStep} />
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 md:p-8">
-            {currentStep === 0 && <PersonalDetails form={form} />}
-            {currentStep === 1 && (
-              <AddressDetails
-                form={form}
-                sameAsResidential={sameAsResidential}
-                setSameAsResidential={setSameAsResidential}
-              />
-            )}
-            {currentStep === 2 && (
-              <UploadDocuments
-                documents={documents}
-                setDocuments={setDocuments}
-                errors={documentErrors}
-              />
-            )}
-
-            <div className="flex justify-between mt-8">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === 0}
-                className="min-w-[100px]"
-              >
-                BACK
-              </Button>
-
-              {currentStep < steps.length - 1 ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  className="min-w-[100px]"
-                >
-                  NEXT
-                </Button>
-              ) : (
-                <Button type="submit" className="min-w-[100px]">
-                  SUBMIT
-                </Button>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              {currentStep === 0 && <PersonalDetails form={form} />}
+              {currentStep === 1 && (
+                <AddressDetails
+                  form={form}
+                  sameAsResidential={sameAsResidential}
+                  setSameAsResidential={setSameAsResidential}
+                />
               )}
-            </div>
-          </form>
+              {currentStep === 2 && (
+                <UploadDocuments
+                  documents={documents}
+                  setDocuments={setDocuments}
+                  errors={documentErrors}
+                />
+              )}
+
+              <Box display="flex" justifyContent="space-between" mt={4}>
+                <Button
+                  variant="outlined"
+                  onClick={handleBack}
+                  disabled={currentStep === 0}
+                  sx={{ minWidth: 100 }}
+                >
+                  BACK
+                </Button>
+
+                {currentStep < steps.length - 1 ? (
+                  <Button
+                    variant="contained"
+                    onClick={handleNext}
+                    sx={{ minWidth: 100 }}
+                  >
+                    NEXT
+                  </Button>
+                ) : (
+                  <Button type="submit" variant="contained" sx={{ minWidth: 100 }}>
+                    SUBMIT
+                  </Button>
+                )}
+              </Box>
+            </form>
+          </CardContent>
         </Card>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };
 
