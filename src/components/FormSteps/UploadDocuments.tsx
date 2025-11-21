@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { 
+  TextField, 
+  Select, 
+  MenuItem, 
+  FormControl, 
+  InputLabel, 
+  Button, 
+  Typography,
+  Paper,
+  IconButton,
+  Box,
+  FormHelperText
+} from "@mui/material";
 import { X, Upload, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -83,91 +85,60 @@ const UploadDocuments = ({
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-foreground">
-            Upload Documents
-          </h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addDocument}
-          >
-            Add Document
-          </Button>
-        </div>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography variant="h6">Upload Documents</Typography>
+        <Button variant="outlined" size="small" onClick={addDocument}>
+          Add Document
+        </Button>
+      </Box>
 
-        <p className="text-sm text-muted-foreground">
-          Minimum 2 documents are required
-        </p>
+      <Typography variant="body2" color="text.secondary">
+        Minimum 2 documents are required
+      </Typography>
 
-        {documents.map((doc, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 border rounded-lg space-y-4 bg-card"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">
-                Document {index + 1}{" "}
-                <span className="text-destructive">*</span>
-              </span>
+      {documents.map((doc, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="subtitle1">
+                Document {index + 1} <span style={{ color: 'red' }}>*</span>
+              </Typography>
               {documents.length > 2 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeDocument(index)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                <IconButton size="small" onClick={() => removeDocument(index)}>
+                  <X size={18} />
+                </IconButton>
               )}
-            </div>
+            </Box>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`fileName-${index}`} className="text-sm">
-                  File Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id={`fileName-${index}`}
-                  placeholder="File Name"
-                  value={doc.fileName}
-                  onChange={(e) =>
-                    updateDocument(index, "fileName", e.target.value)
-                  }
-                />
-              </div>
+            <Box display="flex" flexDirection="column" gap={2}>
+              <TextField
+                fullWidth
+                label="File Name"
+                placeholder="File Name"
+                required
+                value={doc.fileName}
+                onChange={(e) => updateDocument(index, "fileName", e.target.value)}
+                variant="outlined"
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor={`fileType-${index}`} className="text-sm">
-                  Type of File <span className="text-destructive">*</span>
-                </Label>
+              <FormControl fullWidth required>
+                <InputLabel>Type of File</InputLabel>
                 <Select
                   value={doc.fileType}
-                  onValueChange={(value) =>
-                    updateDocument(index, "fileType", value)
-                  }
+                  label="Type of File"
+                  onChange={(e) => updateDocument(index, "fileType", e.target.value)}
                 >
-                  <SelectTrigger id={`fileType-${index}`}>
-                    <SelectValue placeholder="Select file type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="image">Image</SelectItem>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                  </SelectContent>
+                  <MenuItem value="image">Image</MenuItem>
+                  <MenuItem value="pdf">PDF</MenuItem>
                 </Select>
-              </div>
-            </div>
+              </FormControl>
 
-            <div className="space-y-2">
-              <Label htmlFor={`file-${index}`} className="text-sm">
-                Upload Document <span className="text-destructive">*</span>
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
+              <Box>
+                <input
                   id={`file-${index}`}
                   type="file"
                   accept={
@@ -177,37 +148,34 @@ const UploadDocuments = ({
                       ? ".pdf"
                       : "*"
                   }
-                  onChange={(e) =>
-                    handleFileChange(index, e.target.files?.[0] || null)
-                  }
-                  className="hidden"
+                  onChange={(e) => handleFileChange(index, e.target.files?.[0] || null)}
+                  style={{ display: 'none' }}
                 />
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    document.getElementById(`file-${index}`)?.click()
-                  }
-                  className="w-full"
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<Upload size={18} />}
+                  onClick={() => document.getElementById(`file-${index}`)?.click()}
                 >
-                  <Upload className="w-4 h-4 mr-2" />
                   {doc.file ? "Change File" : "Choose File"}
                 </Button>
-              </div>
-              {doc.file && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="w-4 h-4" />
-                  <span>{doc.file.name}</span>
-                </div>
-              )}
-            </div>
+                {doc.file && (
+                  <Box display="flex" alignItems="center" gap={1} mt={1}>
+                    <FileText size={16} />
+                    <Typography variant="body2" color="text.secondary">
+                      {doc.file.name}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
 
-            {errors[index] && (
-              <p className="text-sm text-destructive">{errors[index]}</p>
-            )}
-          </motion.div>
-        ))}
-      </div>
+              {errors[index] && (
+                <FormHelperText error>{errors[index]}</FormHelperText>
+              )}
+            </Box>
+          </Paper>
+        </motion.div>
+      ))}
     </motion.div>
   );
 };

@@ -1,6 +1,5 @@
 import { UseFormReturn } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { TextField } from "@mui/material";
 import { FormData } from "@/pages/MultiStepForm";
 import { motion } from "framer-motion";
 
@@ -27,70 +26,52 @@ const PersonalDetails = ({ form }: PersonalDetailsProps) => {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
-      <div className="space-y-2">
-        <Label htmlFor="firstName" className="text-sm font-medium">
-          First Name <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="firstName"
-          placeholder="First Name"
-          {...register("firstName")}
-          className={errors.firstName ? "border-destructive" : ""}
-        />
-        {errors.firstName && (
-          <p className="text-sm text-destructive">{errors.firstName.message}</p>
-        )}
-      </div>
+      <TextField
+        fullWidth
+        label="First Name"
+        placeholder="First Name"
+        required
+        {...register("firstName")}
+        error={!!errors.firstName}
+        helperText={errors.firstName?.message}
+        variant="outlined"
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="lastName" className="text-sm font-medium">
-          Last Name <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="lastName"
-          placeholder="Last Name"
-          {...register("lastName")}
-          className={errors.lastName ? "border-destructive" : ""}
-        />
-        {errors.lastName && (
-          <p className="text-sm text-destructive">{errors.lastName.message}</p>
-        )}
-      </div>
+      <TextField
+        fullWidth
+        label="Last Name"
+        placeholder="Last Name"
+        required
+        {...register("lastName")}
+        error={!!errors.lastName}
+        helperText={errors.lastName?.message}
+        variant="outlined"
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-sm font-medium">
-          Email <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="Email"
-          {...register("email")}
-          className={errors.email ? "border-destructive" : ""}
-        />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
-      </div>
+      <TextField
+        fullWidth
+        label="Email"
+        type="email"
+        placeholder="Email"
+        required
+        {...register("email")}
+        error={!!errors.email}
+        helperText={errors.email?.message}
+        variant="outlined"
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="dateOfBirth" className="text-sm font-medium">
-          Date of Birth <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="dateOfBirth"
-          type="date"
-          max={maxDateString}
-          {...register("dateOfBirth")}
-          className={errors.dateOfBirth ? "border-destructive" : ""}
-        />
-        {errors.dateOfBirth && (
-          <p className="text-sm text-destructive">{errors.dateOfBirth.message}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Minimum age should be 18 years
-        </p>
-      </div>
+      <TextField
+        fullWidth
+        label="Date of Birth"
+        type="date"
+        required
+        InputLabelProps={{ shrink: true }}
+        inputProps={{ max: maxDateString }}
+        {...register("dateOfBirth")}
+        error={!!errors.dateOfBirth}
+        helperText={errors.dateOfBirth?.message || "Minimum age should be 18 years"}
+        variant="outlined"
+      />
     </motion.div>
   );
 };
