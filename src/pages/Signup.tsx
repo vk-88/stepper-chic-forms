@@ -1,159 +1,158 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { 
-  TextField, 
-  Button, 
-  Card, 
-  CardContent, 
-  Typography, 
-  Box,
-  CircularProgress,
-  Avatar
-} from "@mui/material";
-import { toast } from "sonner";
+import { Form, Input, Button, Card, Typography, message } from "antd";
+import { UserOutlined, LockOutlined, MailOutlined, UserAddOutlined } from "@ant-design/icons";
 import { motion } from "framer-motion";
-import { UserPlus } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
-const signupSchema = z
-  .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+const { Title, Text } = Typography;
 
-type SignupFormData = z.infer<typeof signupSchema>;
+interface SignupFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
 
 const Signup = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const signup = useAuthStore((state) => state.signup);
+  const [form] = Form.useForm();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
-  });
-
-  const onSubmit = async (data: SignupFormData) => {
-    setIsLoading(true);
+  const onFinish = async (values: SignupFormData) => {
+    setLoading(true);
 
     setTimeout(() => {
-      console.log("Signup data:", data);
-      toast.success("Account created successfully! Please sign in.");
-      setIsLoading(false);
-      navigate("/login");
-    }, 1000);
+      const success = signup(values.name, values.email, values.password);
+      
+      if (success) {
+        message.success("Account created successfully! Please sign in.");
+        navigate("/login");
+      } else {
+        message.error("Email already exists");
+      }
+      
+      setLoading(false);
+    }, 800);
   };
 
   return (
-    <Box className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ width: '100%', maxWidth: 450 }}
+        style={{ width: "100%", maxWidth: 420 }}
       >
-        <Card elevation={4}>
-          <CardContent sx={{ p: 4 }}>
-            <Box textAlign="center" mb={4}>
-              <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', mx: 'auto', mb: 2 }}>
-                <UserPlus size={32} />
-              </Avatar>
-              <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Create Account
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Sign up to get started
-              </Typography>
-            </Box>
+        <Card
+          className="shadow-lg"
+          styles={{ body: { padding: "40px 32px" } }}
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserAddOutlined className="text-2xl text-primary-foreground" />
+            </div>
+            <Title level={2} className="!mb-2">
+              Create Account
+            </Title>
+            <Text type="secondary">Sign up to get started</Text>
+          </div>
 
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <Box display="flex" flexDirection="column" gap={2.5}>
-                <TextField
-                  fullWidth
-                  label="Full Name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  {...register("name")}
-                  error={!!errors.name}
-                  helperText={errors.name?.message}
-                  variant="outlined"
-                />
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            autoComplete="off"
+            size="large"
+          >
+            <Form.Item
+              name="name"
+              rules={[
+                { required: true, message: "Please enter your name" },
+                { min: 2, message: "Name must be at least 2 characters" },
+              ]}
+            >
+              <Input
+                prefix={<UserOutlined className="text-muted-foreground" />}
+                placeholder="Full Name"
+              />
+            </Form.Item>
 
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  placeholder="Enter your email"
-                  {...register("email")}
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                  variant="outlined"
-                />
+            <Form.Item
+              name="email"
+              rules={[
+                { required: true, message: "Please enter your email" },
+                { type: "email", message: "Please enter a valid email" },
+              ]}
+            >
+              <Input
+                prefix={<MailOutlined className="text-muted-foreground" />}
+                placeholder="Email"
+              />
+            </Form.Item>
 
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  placeholder="Create a password"
-                  {...register("password")}
-                  error={!!errors.password}
-                  helperText={errors.password?.message}
-                  variant="outlined"
-                />
+            <Form.Item
+              name="password"
+              rules={[
+                { required: true, message: "Please enter your password" },
+                { min: 6, message: "Password must be at least 6 characters" },
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined className="text-muted-foreground" />}
+                placeholder="Password"
+              />
+            </Form.Item>
 
-                <TextField
-                  fullWidth
-                  label="Confirm Password"
-                  type="password"
-                  placeholder="Confirm your password"
-                  {...register("confirmPassword")}
-                  error={!!errors.confirmPassword}
-                  helperText={errors.confirmPassword?.message}
-                  variant="outlined"
-                />
+            <Form.Item
+              name="confirmPassword"
+              dependencies={["password"]}
+              rules={[
+                { required: true, message: "Please confirm your password" },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue("password") === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error("Passwords don't match"));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined className="text-muted-foreground" />}
+                placeholder="Confirm Password"
+              />
+            </Form.Item>
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  disabled={isLoading}
-                  sx={{ mt: 1 }}
-                >
-                  {isLoading ? (
-                    <>
-                      <CircularProgress size={20} sx={{ mr: 1 }} />
-                      Creating account...
-                    </>
-                  ) : (
-                    "Sign Up"
-                  )}
-                </Button>
-              </Box>
-            </form>
+            <Form.Item className="!mb-4">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                className="h-12 font-medium"
+              >
+                Sign Up
+              </Button>
+            </Form.Item>
+          </Form>
 
-            <Box mt={3} textAlign="center">
-              <Typography variant="body2" color="text.secondary">
-                Already have an account?{" "}
-                <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>
-                  Sign in
-                </Link>
-              </Typography>
-            </Box>
-          </CardContent>
+          <div className="text-center">
+            <Text type="secondary">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-primary font-medium hover:underline"
+              >
+                Sign in
+              </Link>
+            </Text>
+          </div>
         </Card>
       </motion.div>
-    </Box>
+    </div>
   );
 };
 

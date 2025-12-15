@@ -1,143 +1,122 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { 
-  TextField, 
-  Button, 
-  Card, 
-  CardContent, 
-  Typography, 
-  Box,
-  CircularProgress,
-  Avatar
-} from "@mui/material";
-import { toast } from "sonner";
+import { Form, Input, Button, Card, Typography, message } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { motion } from "framer-motion";
-import { LogIn } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+const { Title, Text } = Typography;
 
-type LoginFormData = z.infer<typeof loginSchema>;
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 
 const Login = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
+  const [form] = Form.useForm();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  const onFinish = async (values: LoginFormData) => {
+    setLoading(true);
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-
-    // Check for admin credentials
-    if (data.email === "admin@admin.com" && data.password === "admin123") {
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("isAdmin", "true");
-      toast.success("Welcome Admin!");
-      setIsLoading(false);
-      navigate("/admin");
-      return;
-    }
-
-    // Regular user login
     setTimeout(() => {
-      console.log("Login data:", data);
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("isAdmin", "false");
-      toast.success("Logged in successfully!");
-      setIsLoading(false);
-      navigate("/form");
-    }, 1000);
+      const result = login(values.email, values.password);
+      
+      if (result.success) {
+        message.success(result.isAdmin ? "Welcome Admin!" : "Logged in successfully!");
+        navigate(result.isAdmin ? "/admin" : "/form");
+      } else {
+        message.error("Invalid credentials");
+      }
+      
+      setLoading(false);
+    }, 800);
   };
 
   return (
-    <Box className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ width: '100%', maxWidth: 450 }}
+        style={{ width: "100%", maxWidth: 420 }}
       >
-        <Card elevation={4}>
-          <CardContent sx={{ p: 4 }}>
-            <Box textAlign="center" mb={4}>
-              <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', mx: 'auto', mb: 2 }}>
-                <LogIn size={32} />
-              </Avatar>
-              <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Welcome Back
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Sign in to access your account
-              </Typography>
-            </Box>
+        <Card
+          className="shadow-lg"
+          styles={{ body: { padding: "40px 32px" } }}
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserOutlined className="text-2xl text-primary-foreground" />
+            </div>
+            <Title level={2} className="!mb-2">
+              Welcome Back
+            </Title>
+            <Text type="secondary">Sign in to access your account</Text>
+          </div>
 
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <Box display="flex" flexDirection="column" gap={3}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  type="email"
-                  placeholder="Enter your email"
-                  {...register("email")}
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                  variant="outlined"
-                />
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            autoComplete="off"
+            size="large"
+          >
+            <Form.Item
+              name="email"
+              rules={[
+                { required: true, message: "Please enter your email" },
+                { type: "email", message: "Please enter a valid email" },
+              ]}
+            >
+              <Input
+                prefix={<UserOutlined className="text-muted-foreground" />}
+                placeholder="Email"
+              />
+            </Form.Item>
 
-                <TextField
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  placeholder="Enter your password"
-                  {...register("password")}
-                  error={!!errors.password}
-                  helperText={errors.password?.message}
-                  variant="outlined"
-                />
+            <Form.Item
+              name="password"
+              rules={[
+                { required: true, message: "Please enter your password" },
+                { min: 6, message: "Password must be at least 6 characters" },
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined className="text-muted-foreground" />}
+                placeholder="Password"
+              />
+            </Form.Item>
 
-                <Button
-                  type="submit"
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  disabled={isLoading}
-                  sx={{ mt: 1 }}
-                >
-                  {isLoading ? (
-                    <>
-                      <CircularProgress size={20} sx={{ mr: 1 }} />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </Box>
-            </form>
+            <Form.Item className="!mb-4">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                className="h-12 font-medium"
+              >
+                Sign In
+              </Button>
+            </Form.Item>
+          </Form>
 
-            <Box mt={3} textAlign="center">
-              <Typography variant="body2" color="text.secondary">
-                Don't have an account?{" "}
-                <Link to="/signup" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>
-                  Sign up
-                </Link>
-              </Typography>
-            </Box>
-          </CardContent>
+          <div className="text-center">
+            <Text type="secondary">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="text-primary font-medium hover:underline"
+              >
+                Sign up
+              </Link>
+            </Text>
+          </div>
         </Card>
       </motion.div>
-    </Box>
+    </div>
   );
 };
 

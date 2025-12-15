@@ -1,46 +1,20 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button, Card, CardContent, Box, Typography } from "@mui/material";
+import { Form, Button, Card, message } from "antd";
+import { LogoutOutlined, ArrowLeftOutlined, ArrowRightOutlined, CheckOutlined } from "@ant-design/icons";
 import Stepper, { Step } from "@/components/Stepper";
 import PersonalDetails from "@/components/FormSteps/PersonalDetails";
 import AddressDetails from "@/components/FormSteps/AddressDetails";
-import UploadDocuments, {
-  DocumentData,
-} from "@/components/FormSteps/UploadDocuments";
-import { toast } from "sonner";
+import UploadDocuments, { DocumentData } from "@/components/FormSteps/UploadDocuments";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { motion } from "framer-motion";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useFormStore, FormSubmission } from "@/store/useFormStore";
 
 const steps: Step[] = [
   { id: 1, title: "Personal Details" },
   { id: 2, title: "Address Details" },
   { id: 3, title: "Upload Documents" },
 ];
-
-// Calculate date 18 years ago
-const eighteenYearsAgo = new Date();
-eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
-
-const formSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(50),
-  lastName: z.string().min(1, "Last name is required").max(50),
-  email: z.string().email("Invalid email address"),
-  dateOfBirth: z
-    .string()
-    .min(1, "Date of birth is required")
-    .refine((date) => {
-      const birthDate = new Date(date);
-      return birthDate <= eighteenYearsAgo;
-    }, "You must be at least 18 years old"),
-  residentialStreet1: z.string().min(1, "Street 1 is required"),
-  residentialStreet2: z.string().min(1, "Street 2 is required"),
-  permanentStreet1: z.string().optional(),
-  permanentStreet2: z.string().optional(),
-});
-
-export type FormData = z.infer<typeof formSchema>;
 
 const MultiStepForm = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -51,20 +25,11 @@ const MultiStepForm = () => {
   ]);
   const [documentErrors, setDocumentErrors] = useState<string[]>([]);
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+  const addSubmission = useFormStore((state) => state.addSubmission);
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      dateOfBirth: "",
-      residentialStreet1: "",
-      residentialStreet2: "",
-      permanentStreet1: "",
-      permanentStreet2: "",
-    },
-  });
+  const [personalForm] = Form.useForm();
+  const [addressForm] = Form.useForm();
 
   const validateDocuments = (): boolean => {
     const errors: string[] = [];
@@ -85,28 +50,22 @@ const MultiStepForm = () => {
 
   const handleNext = async () => {
     if (currentStep === 0) {
-      const isValid = await form.trigger([
-        "firstName",
-        "lastName",
-        "email",
-        "dateOfBirth",
-      ]);
-      if (isValid) {
+      try {
+        await personalForm.validateFields();
         setCurrentStep(1);
+      } catch (error) {
+        // Validation failed
       }
     } else if (currentStep === 1) {
-      const fieldsToValidate: (keyof FormData)[] = [
-        "residentialStreet1",
-        "residentialStreet2",
-      ];
-
-      if (!sameAsResidential) {
-        fieldsToValidate.push("permanentStreet1", "permanentStreet2");
-      }
-
-      const isValid = await form.trigger(fieldsToValidate);
-      if (isValid) {
+      try {
+        const fieldsToValidate = ["residentialStreet1", "residentialStreet2"];
+        if (!sameAsResidential) {
+          fieldsToValidate.push("permanentStreet1", "permanentStreet2");
+        }
+        await addressForm.validateFields(fieldsToValidate);
         setCurrentStep(2);
+      } catch (error) {
+        // Validation failed
       }
     }
   };
@@ -117,116 +76,130 @@ const MultiStepForm = () => {
     }
   };
 
-  const onSubmit = async (data: FormData) => {
+  const handleSubmit = async () => {
     if (!validateDocuments()) {
-      toast.error("Please fill in all document details");
+      message.error("Please fill in all document details");
       return;
     }
 
-    // If same as residential, copy the address
-    const formData = {
-      ...data,
+    const personalData = personalForm.getFieldsValue();
+    const addressData = addressForm.getFieldsValue();
+
+    const formData: FormSubmission = {
+      id: Date.now().toString(),
+      firstName: personalData.firstName,
+      lastName: personalData.lastName,
+      email: personalData.email,
+      dateOfBirth: personalData.dateOfBirth?.format("YYYY-MM-DD") || "",
+      residentialStreet1: addressData.residentialStreet1,
+      residentialStreet2: addressData.residentialStreet2,
       permanentStreet1: sameAsResidential
-        ? data.residentialStreet1
-        : data.permanentStreet1,
+        ? addressData.residentialStreet1
+        : addressData.permanentStreet1,
       permanentStreet2: sameAsResidential
-        ? data.residentialStreet2
-        : data.permanentStreet2,
-      documents: documents.map(doc => ({
+        ? addressData.residentialStreet2
+        : addressData.permanentStreet2,
+      documents: documents.map((doc) => ({
         fileName: doc.fileName,
         fileType: doc.fileType,
-        file: doc.file?.name || ''
+        file: doc.file?.name || "",
       })),
       submittedAt: new Date().toISOString(),
-      id: Date.now().toString()
     };
 
-    // Store in localStorage
-    const existingSubmissions = JSON.parse(localStorage.getItem("formSubmissions") || "[]");
-    existingSubmissions.push(formData);
-    localStorage.setItem("formSubmissions", JSON.stringify(existingSubmissions));
+    addSubmission(formData);
+    message.success("Form submitted successfully!");
 
-    console.log("Form submitted:", formData);
-    toast.success("Form submitted successfully!");
-    
-    // Reset form after successful submission
-    form.reset();
+    // Reset form
+    personalForm.resetFields();
+    addressForm.resetFields();
     setDocuments([
       { fileName: "", fileType: "", file: null },
       { fileName: "", fileType: "", file: null },
     ]);
     setCurrentStep(0);
+    setSameAsResidential(false);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("isAdmin");
-    toast.success("Logged out successfully");
+    logout();
+    message.success("Logged out successfully");
     navigate("/login");
   };
 
   return (
-    <Box className="min-h-screen bg-background py-8 px-4">
-      <Box maxWidth="1000px" mx="auto">
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-          <Typography variant="h4" fontWeight="bold">
+    <div className="min-h-screen bg-background py-8 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-4xl mx-auto"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Document Submission Form
-          </Typography>
-          <Button variant="outlined" onClick={handleLogout} startIcon={<LogOut size={18} />}>
+          </h1>
+          <Button
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+          >
             Logout
           </Button>
-        </Box>
+        </div>
 
-        <Card elevation={3}>
+        <Card className="shadow-lg">
           <Stepper steps={steps} currentStep={currentStep} />
 
-          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              {currentStep === 0 && <PersonalDetails form={form} />}
-              {currentStep === 1 && (
-                <AddressDetails
-                  form={form}
-                  sameAsResidential={sameAsResidential}
-                  setSameAsResidential={setSameAsResidential}
-                />
-              )}
-              {currentStep === 2 && (
-                <UploadDocuments
-                  documents={documents}
-                  setDocuments={setDocuments}
-                  errors={documentErrors}
-                />
-              )}
+          <div className="p-4 md:p-8">
+            {currentStep === 0 && <PersonalDetails form={personalForm} />}
+            {currentStep === 1 && (
+              <AddressDetails
+                form={addressForm}
+                sameAsResidential={sameAsResidential}
+                setSameAsResidential={setSameAsResidential}
+              />
+            )}
+            {currentStep === 2 && (
+              <UploadDocuments
+                documents={documents}
+                setDocuments={setDocuments}
+                errors={documentErrors}
+              />
+            )}
 
-              <Box display="flex" justifyContent="space-between" mt={4}>
+            <div className="flex justify-between mt-8">
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={handleBack}
+                disabled={currentStep === 0}
+                size="large"
+              >
+                Back
+              </Button>
+
+              {currentStep < steps.length - 1 ? (
                 <Button
-                  variant="outlined"
-                  onClick={handleBack}
-                  disabled={currentStep === 0}
-                  sx={{ minWidth: 100 }}
+                  type="primary"
+                  onClick={handleNext}
+                  size="large"
                 >
-                  BACK
+                  Next <ArrowRightOutlined />
                 </Button>
-
-                {currentStep < steps.length - 1 ? (
-                  <Button
-                    variant="contained"
-                    onClick={handleNext}
-                    sx={{ minWidth: 100 }}
-                  >
-                    NEXT
-                  </Button>
-                ) : (
-                  <Button type="submit" variant="contained" sx={{ minWidth: 100 }}>
-                    SUBMIT
-                  </Button>
-                )}
-              </Box>
-            </form>
-          </CardContent>
+              ) : (
+                <Button
+                  type="primary"
+                  onClick={handleSubmit}
+                  icon={<CheckOutlined />}
+                  size="large"
+                >
+                  Submit
+                </Button>
+              )}
+            </div>
+          </div>
         </Card>
-      </Box>
-    </Box>
+      </motion.div>
+    </div>
   );
 };
 

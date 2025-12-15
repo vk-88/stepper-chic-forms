@@ -1,89 +1,61 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Box,
-  Typography,
-  Button,
-  TextField,
   Card,
-  CardContent,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@mui/material";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
-import { LogOut, Trash2, Search } from "lucide-react";
-import { toast } from "sonner";
+  Input,
+  Button,
+  Table,
+  Modal,
+  Typography,
+  message,
+  Space,
+  Tag,
+} from "antd";
+import {
+  SearchOutlined,
+  DeleteOutlined,
+  LogoutOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
 import { motion } from "framer-motion";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useFormStore, FormSubmission } from "@/store/useFormStore";
+import type { ColumnsType } from "antd/es/table";
 
-interface Submission {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  dateOfBirth: string;
-  residentialStreet1: string;
-  residentialStreet2: string;
-  permanentStreet1?: string;
-  permanentStreet2?: string;
-  documents: Array<{
-    fileName: string;
-    fileType: string;
-    file: string;
-  }>;
-  submittedAt: string;
-}
+const { Title, Text } = Typography;
+const { confirm } = Modal;
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRow, setSelectedRow] = useState<Submission | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const { submissions, deleteSubmission } = useFormStore();
 
   useEffect(() => {
-    // Check if user is admin
-    const isAdmin = localStorage.getItem("isAdmin") === "true";
-    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-
-    if (!isAuthenticated || !isAdmin) {
-      toast.error("Access denied. Admin only.");
+    if (!isAuthenticated || !user?.isAdmin) {
+      message.error("Access denied. Admin only.");
       navigate("/login");
-      return;
     }
+  }, [isAuthenticated, user, navigate]);
 
-    // Load submissions from localStorage
-    loadSubmissions();
-  }, [navigate]);
-
-  const loadSubmissions = () => {
-    const data = JSON.parse(localStorage.getItem("formSubmissions") || "[]");
-    setSubmissions(data);
-  };
-
-  const handleDelete = (id: string) => {
-    const submission = submissions.find((s) => s.id === id);
-    setSelectedRow(submission || null);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (selectedRow) {
-      const updated = submissions.filter((s) => s.id !== selectedRow.id);
-      localStorage.setItem("formSubmissions", JSON.stringify(updated));
-      setSubmissions(updated);
-      toast.success("Submission deleted successfully");
-      setDeleteDialogOpen(false);
-      setSelectedRow(null);
-    }
+  const handleDelete = (id: string, name: string) => {
+    confirm({
+      title: "Confirm Delete",
+      icon: <ExclamationCircleOutlined />,
+      content: `Are you sure you want to delete the submission from ${name}?`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk() {
+        deleteSubmission(id);
+        message.success("Submission deleted successfully");
+      },
+    });
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("isAdmin");
-    toast.success("Logged out successfully");
+    logout();
+    message.success("Logged out successfully");
     navigate("/login");
   };
 
@@ -96,121 +68,119 @@ const AdminPanel = () => {
     );
   }, [submissions, searchTerm]);
 
-  const columns: GridColDef[] = [
-    { field: "firstName", headerName: "First Name", width: 150 },
-    { field: "lastName", headerName: "Last Name", width: 150 },
-    { field: "email", headerName: "Email", width: 200 },
-    { field: "dateOfBirth", headerName: "Date of Birth", width: 130 },
+  const columns: ColumnsType<FormSubmission> = [
     {
-      field: "submittedAt",
-      headerName: "Submitted At",
-      width: 180,
-      valueFormatter: (params) => new Date(params).toLocaleString(),
+      title: "First Name",
+      dataIndex: "firstName",
+      key: "firstName",
+      sorter: (a, b) => a.firstName.localeCompare(b.firstName),
     },
     {
-      field: "actions",
-      headerName: "Actions",
+      title: "Last Name",
+      dataIndex: "lastName",
+      key: "lastName",
+      sorter: (a, b) => a.lastName.localeCompare(b.lastName),
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      ellipsis: true,
+    },
+    {
+      title: "Date of Birth",
+      dataIndex: "dateOfBirth",
+      key: "dateOfBirth",
+    },
+    {
+      title: "Documents",
+      dataIndex: "documents",
+      key: "documents",
+      render: (documents: FormSubmission["documents"]) => (
+        <Space>
+          {documents.map((doc, idx) => (
+            <Tag key={idx} color="blue">
+              {doc.fileType}
+            </Tag>
+          ))}
+        </Space>
+      ),
+    },
+    {
+      title: "Submitted At",
+      dataIndex: "submittedAt",
+      key: "submittedAt",
+      render: (date: string) => new Date(date).toLocaleString(),
+      sorter: (a, b) =>
+        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
+    },
+    {
+      title: "Actions",
+      key: "actions",
       width: 100,
-      sortable: false,
-      renderCell: (params) => (
-        <IconButton
-          color="error"
-          onClick={() => handleDelete(params.row.id)}
-          size="small"
-        >
-          <Trash2 size={18} />
-        </IconButton>
+      render: (_, record) => (
+        <Button
+          type="text"
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() =>
+            handleDelete(record.id, `${record.firstName} ${record.lastName}`)
+          }
+        />
       ),
     },
   ];
 
   return (
-    <Box className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="max-w-7xl mx-auto"
       >
-        <Box maxWidth="1400px" mx="auto">
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={4}
-            flexWrap="wrap"
-            gap={2}
-          >
-            <Typography variant="h4" fontWeight="bold">
-              Admin Panel
-            </Typography>
-            <Button
-              variant="outlined"
-              onClick={handleLogout}
-              startIcon={<LogOut size={18} />}
-            >
-              Logout
-            </Button>
-          </Box>
-
-          <Card elevation={3}>
-            <CardContent>
-              <Box mb={3}>
-                <TextField
-                  fullWidth
-                  placeholder="Search by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: <Search size={20} style={{ marginRight: 8 }} />,
-                  }}
-                />
-              </Box>
-
-              <Box sx={{ height: 600, width: "100%" }}>
-                <DataGrid
-                  rows={filteredSubmissions}
-                  columns={columns}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10 },
-                    },
-                  }}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  checkboxSelection
-                  disableRowSelectionOnClick
-                />
-              </Box>
-
-              <Box mt={3}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Submissions: {submissions.length}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Box>
-      </motion.div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete the submission from{" "}
-            <strong>
-              {selectedRow?.firstName} {selectedRow?.lastName}
-            </strong>
-            ?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmDelete} color="error" variant="contained">
-            Delete
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+          <Title level={2} className="!mb-0">
+            Admin Panel
+          </Title>
+          <Button icon={<LogoutOutlined />} onClick={handleLogout}>
+            Logout
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        </div>
+
+        <Card className="shadow-lg">
+          <div className="mb-6">
+            <Input
+              size="large"
+              placeholder="Search by name or email..."
+              prefix={<SearchOutlined className="text-muted-foreground" />}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              allowClear
+            />
+          </div>
+
+          <Table
+            columns={columns}
+            dataSource={filteredSubmissions}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} of ${total} items`,
+            }}
+            scroll={{ x: 800 }}
+          />
+
+          <div className="mt-4">
+            <Text type="secondary">
+              Total Submissions: {submissions.length}
+            </Text>
+          </div>
+        </Card>
+      </motion.div>
+    </div>
   );
 };
 

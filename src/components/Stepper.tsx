@@ -1,4 +1,4 @@
-import { Stepper as MuiStepper, Step as MuiStep, StepLabel, Box } from "@mui/material";
+import { Steps } from "antd";
 
 export interface Step {
   id: number;
@@ -12,15 +12,15 @@ interface StepperProps {
 
 const Stepper = ({ steps, currentStep }: StepperProps) => {
   return (
-    <Box sx={{ width: '100%', p: { xs: 2, md: 4 }, borderBottom: 1, borderColor: 'divider' }}>
-      <MuiStepper activeStep={currentStep} alternativeLabel>
-        {steps.map((step) => (
-          <MuiStep key={step.id}>
-            <StepLabel>{step.title}</StepLabel>
-          </MuiStep>
-        ))}
-      </MuiStepper>
-    </Box>
+    <div className="w-full p-4 md:p-6 border-b border-border">
+      <Steps
+        current={currentStep}
+        items={steps.map((step) => ({
+          title: step.title,
+        }))}
+        responsive
+      />
+    </div>
   );
 };
 

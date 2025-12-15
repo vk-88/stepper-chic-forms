@@ -1,10 +1,11 @@
-import { UseFormReturn } from "react-hook-form";
-import { TextField, FormControlLabel, Checkbox, Typography } from "@mui/material";
-import { FormData } from "@/pages/MultiStepForm";
+import { Form, Input, Checkbox, Typography } from "antd";
+import { HomeOutlined } from "@ant-design/icons";
 import { motion } from "framer-motion";
 
+const { Title } = Typography;
+
 interface AddressDetailsProps {
-  form: UseFormReturn<FormData>;
+  form: ReturnType<typeof Form.useForm>[0];
   sameAsResidential: boolean;
   setSameAsResidential: (value: boolean) => void;
 }
@@ -14,10 +15,19 @@ const AddressDetails = ({
   sameAsResidential,
   setSameAsResidential,
 }: AddressDetailsProps) => {
-  const {
-    register,
-    formState: { errors },
-  } = form;
+  const handleSameAsResidentialChange = (checked: boolean) => {
+    setSameAsResidential(checked);
+    
+    if (checked) {
+      const residentialStreet1 = form.getFieldValue("residentialStreet1");
+      const residentialStreet2 = form.getFieldValue("residentialStreet2");
+      
+      form.setFieldsValue({
+        permanentStreet1: residentialStreet1,
+        permanentStreet2: residentialStreet2,
+      });
+    }
+  };
 
   return (
     <motion.div
@@ -25,78 +35,82 @@ const AddressDetails = ({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
     >
-      {/* Residential Address */}
-      <div className="space-y-4">
-        <Typography variant="h6" className="text-foreground">
-          Residential Address
-        </Typography>
+      <Form form={form} layout="vertical" size="large">
+        {/* Residential Address */}
+        <div className="mb-6">
+          <Title level={5} className="!mb-4 text-foreground">
+            <HomeOutlined className="mr-2" />
+            Residential Address
+          </Title>
 
-        <TextField
-          fullWidth
-          label="Street 1"
-          placeholder="Street 1"
-          required
-          {...register("residentialStreet1")}
-          error={!!errors.residentialStreet1}
-          helperText={errors.residentialStreet1?.message}
-          variant="outlined"
-        />
+          <Form.Item
+            name="residentialStreet1"
+            label="Street 1"
+            rules={[{ required: true, message: "Street 1 is required" }]}
+          >
+            <Input placeholder="Enter street address line 1" />
+          </Form.Item>
 
-        <TextField
-          fullWidth
-          label="Street 2"
-          placeholder="Street 2"
-          required
-          {...register("residentialStreet2")}
-          error={!!errors.residentialStreet2}
-          helperText={errors.residentialStreet2?.message}
-          variant="outlined"
-        />
-      </div>
+          <Form.Item
+            name="residentialStreet2"
+            label="Street 2"
+            rules={[{ required: true, message: "Street 2 is required" }]}
+          >
+            <Input placeholder="Enter street address line 2" />
+          </Form.Item>
+        </div>
 
-      {/* Same as Residential Checkbox */}
-      <FormControlLabel
-        control={
+        {/* Same as Residential Checkbox */}
+        <Form.Item className="!mb-6">
           <Checkbox
             checked={sameAsResidential}
-            onChange={(e) => setSameAsResidential(e.target.checked)}
-          />
-        }
-        label="Same as Residential Address"
-      />
+            onChange={(e) => handleSameAsResidentialChange(e.target.checked)}
+          >
+            Same as Residential Address
+          </Checkbox>
+        </Form.Item>
 
-      {/* Permanent Address */}
-      <div className="space-y-4">
-        <Typography variant="h6" className="text-foreground">
-          Permanent Address
-        </Typography>
+        {/* Permanent Address */}
+        <div>
+          <Title level={5} className="!mb-4 text-foreground">
+            <HomeOutlined className="mr-2" />
+            Permanent Address
+          </Title>
 
-        <TextField
-          fullWidth
-          label="Street 1"
-          placeholder="Street 1"
-          required={!sameAsResidential}
-          {...register("permanentStreet1")}
-          disabled={sameAsResidential}
-          error={!!errors.permanentStreet1}
-          helperText={errors.permanentStreet1?.message}
-          variant="outlined"
-        />
+          <Form.Item
+            name="permanentStreet1"
+            label="Street 1"
+            rules={[
+              {
+                required: !sameAsResidential,
+                message: "Street 1 is required",
+              },
+            ]}
+          >
+            <Input
+              placeholder="Enter street address line 1"
+              disabled={sameAsResidential}
+            />
+          </Form.Item>
 
-        <TextField
-          fullWidth
-          label="Street 2"
-          placeholder="Street 2"
-          required={!sameAsResidential}
-          {...register("permanentStreet2")}
-          disabled={sameAsResidential}
-          error={!!errors.permanentStreet2}
-          helperText={errors.permanentStreet2?.message}
-          variant="outlined"
-        />
-      </div>
+          <Form.Item
+            name="permanentStreet2"
+            label="Street 2"
+            rules={[
+              {
+                required: !sameAsResidential,
+                message: "Street 2 is required",
+              },
+            ]}
+          >
+            <Input
+              placeholder="Enter street address line 2"
+              disabled={sameAsResidential}
+            />
+          </Form.Item>
+        </div>
+      </Form>
     </motion.div>
   );
 };

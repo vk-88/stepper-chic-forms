@@ -1,19 +1,13 @@
-import { 
-  TextField, 
-  Select, 
-  MenuItem, 
-  FormControl, 
-  InputLabel, 
-  Button, 
-  Typography,
-  Paper,
-  IconButton,
-  Box,
-  FormHelperText
-} from "@mui/material";
-import { X, Upload, FileText } from "lucide-react";
+import { Input, Select, Button, Typography, Card, Upload, message } from "antd";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  UploadOutlined,
+  FileTextOutlined,
+} from "@ant-design/icons";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
+
+const { Title, Text } = Typography;
 
 export interface DocumentData {
   fileName: string;
@@ -40,7 +34,7 @@ const UploadDocuments = ({
     if (documents.length > 2) {
       setDocuments(documents.filter((_, i) => i !== index));
     } else {
-      toast.error("Minimum 2 documents are required");
+      message.error("Minimum 2 documents are required");
     }
   };
 
@@ -64,12 +58,12 @@ const UploadDocuments = ({
     if (document.fileType === "image") {
       const validImageTypes = ["jpg", "jpeg", "png", "gif", "webp"];
       if (!validImageTypes.includes(fileExtension || "")) {
-        toast.error("Please upload a valid image file");
+        message.error("Please upload a valid image file");
         return;
       }
     } else if (document.fileType === "pdf") {
       if (fileExtension !== "pdf") {
-        toast.error("Please upload a PDF file");
+        message.error("Please upload a PDF file");
         return;
       }
     }
@@ -83,18 +77,19 @@ const UploadDocuments = ({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
     >
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="h6">Upload Documents</Typography>
-        <Button variant="outlined" size="small" onClick={addDocument}>
+      <div className="flex justify-between items-center mb-4">
+        <Title level={5} className="!mb-0">
+          Upload Documents
+        </Title>
+        <Button type="dashed" icon={<PlusOutlined />} onClick={addDocument}>
           Add Document
         </Button>
-      </Box>
+      </div>
 
-      <Typography variant="body2" color="text.secondary">
+      <Text type="secondary" className="block mb-6">
         Minimum 2 documents are required
-      </Typography>
+      </Text>
 
       {documents.map((doc, index) => (
         <motion.div
@@ -102,45 +97,62 @@ const UploadDocuments = ({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-              <Typography variant="subtitle1">
-                Document {index + 1} <span style={{ color: 'red' }}>*</span>
-              </Typography>
+          <Card
+            className="mb-4"
+            styles={{ body: { padding: 20 } }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <Text strong>
+                Document {index + 1}{" "}
+                <span className="text-destructive">*</span>
+              </Text>
               {documents.length > 2 && (
-                <IconButton size="small" onClick={() => removeDocument(index)}>
-                  <X size={18} />
-                </IconButton>
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={() => removeDocument(index)}
+                  size="small"
+                />
               )}
-            </Box>
+            </div>
 
-            <Box display="flex" flexDirection="column" gap={2}>
-              <TextField
-                fullWidth
-                label="File Name"
-                placeholder="File Name"
-                required
-                value={doc.fileName}
-                onChange={(e) => updateDocument(index, "fileName", e.target.value)}
-                variant="outlined"
-              />
+            <div className="space-y-4">
+              <div>
+                <Text className="block mb-2">File Name</Text>
+                <Input
+                  placeholder="Enter file name"
+                  value={doc.fileName}
+                  onChange={(e) =>
+                    updateDocument(index, "fileName", e.target.value)
+                  }
+                  size="large"
+                />
+              </div>
 
-              <FormControl fullWidth required>
-                <InputLabel>Type of File</InputLabel>
+              <div>
+                <Text className="block mb-2">Type of File</Text>
                 <Select
-                  value={doc.fileType}
-                  label="Type of File"
-                  onChange={(e) => updateDocument(index, "fileType", e.target.value)}
-                >
-                  <MenuItem value="image">Image</MenuItem>
-                  <MenuItem value="pdf">PDF</MenuItem>
-                </Select>
-              </FormControl>
+                  className="w-full"
+                  placeholder="Select file type"
+                  value={doc.fileType || undefined}
+                  onChange={(value) => updateDocument(index, "fileType", value)}
+                  size="large"
+                  options={[
+                    { value: "image", label: "Image" },
+                    { value: "pdf", label: "PDF" },
+                  ]}
+                />
+              </div>
 
-              <Box>
-                <input
-                  id={`file-${index}`}
-                  type="file"
+              <div>
+                <Text className="block mb-2">Upload File</Text>
+                <Upload
+                  beforeUpload={(file) => {
+                    handleFileChange(index, file);
+                    return false;
+                  }}
+                  showUploadList={false}
                   accept={
                     doc.fileType === "image"
                       ? "image/*"
@@ -148,32 +160,24 @@ const UploadDocuments = ({
                       ? ".pdf"
                       : "*"
                   }
-                  onChange={(e) => handleFileChange(index, e.target.files?.[0] || null)}
-                  style={{ display: 'none' }}
-                />
-                <Button
-                  variant="outlined"
-                  fullWidth
-                  startIcon={<Upload size={18} />}
-                  onClick={() => document.getElementById(`file-${index}`)?.click()}
                 >
-                  {doc.file ? "Change File" : "Choose File"}
-                </Button>
+                  <Button icon={<UploadOutlined />} block size="large">
+                    {doc.file ? "Change File" : "Choose File"}
+                  </Button>
+                </Upload>
                 {doc.file && (
-                  <Box display="flex" alignItems="center" gap={1} mt={1}>
-                    <FileText size={16} />
-                    <Typography variant="body2" color="text.secondary">
-                      {doc.file.name}
-                    </Typography>
-                  </Box>
+                  <div className="flex items-center gap-2 mt-2 text-muted-foreground">
+                    <FileTextOutlined />
+                    <Text type="secondary">{doc.file.name}</Text>
+                  </div>
                 )}
-              </Box>
+              </div>
 
               {errors[index] && (
-                <FormHelperText error>{errors[index]}</FormHelperText>
+                <Text type="danger">{errors[index]}</Text>
               )}
-            </Box>
-          </Paper>
+            </div>
+          </Card>
         </motion.div>
       ))}
     </motion.div>
